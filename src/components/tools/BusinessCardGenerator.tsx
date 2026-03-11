@@ -1,0 +1,272 @@
+import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Download, Upload, Briefcase, Mail, Phone, Globe, MapPin, Check, ChevronDown, FileType, FileImage, FileText } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+
+const templates = [
+  { id: 'minimal', name: 'Minimal White', bg: 'bg-white', text: 'text-slate-900', accent: 'bg-emerald-500' },
+  { id: 'dark', name: 'Professional Dark', bg: 'bg-slate-900', text: 'text-white', accent: 'bg-emerald-500' },
+  { id: 'creative', name: 'Creative Emerald', bg: 'bg-emerald-500', text: 'text-black', accent: 'bg-black' },
+  { id: 'luxury', name: 'Luxury Gold', bg: 'bg-black', text: 'text-amber-400', accent: 'bg-amber-400' },
+];
+
+export default function BusinessCardGenerator() {
+  const [template, setTemplate] = useState(templates[1]);
+  const [data, setData] = useState({
+    name: 'John Doe',
+    title: 'Senior Developer',
+    email: 'john@example.com',
+    phone: '+1 234 567 890',
+    website: 'www.example.com',
+    address: '123 Tech Street, Silicon Valley'
+  });
+  const [logo, setLogo] = useState<string | null>(null);
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setLogo(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const downloadAs = async (format: 'png' | 'jpg' | 'pdf') => {
+    if (!cardRef.current) return;
+    setIsDownloading(true);
+    setShowDownloadMenu(false);
+
+    try {
+      const canvas = await html2canvas(cardRef.current, { 
+        scale: 4, 
+        backgroundColor: null,
+        useCORS: true,
+        logging: false
+      });
+
+      const fileName = `business-card-${data.name}`;
+
+      if (format === 'pdf') {
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+        const pdf = new jsPDF({
+          orientation: 'landscape',
+          unit: 'px',
+          format: [canvas.width, canvas.height]
+        });
+        pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
+        pdf.save(`${fileName}.pdf`);
+      } else {
+        const mimeType = format === 'png' ? 'image/png' : 'image/jpeg';
+        const link = document.createElement('a');
+        link.download = `${fileName}.${format}`;
+        link.href = canvas.toDataURL(mimeType, 1.0);
+        link.click();
+      }
+    } catch (error) {
+      console.error('Download failed:', error);
+      alert('Failed to generate file. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-white p-6 pb-24">
+      <div className="flex items-center gap-4 mb-8">
+        <button onClick={() => navigate(-1)} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors">
+          <ArrowLeft size={20} />
+        </button>
+        <h1 className="text-xl font-bold flex items-center gap-2">
+          Business Card Generator <Briefcase size={20} className="text-emerald-400" />
+        </h1>
+      </div>
+
+      <div className="space-y-8">
+        {/* Preview Area */}
+        <div className="flex justify-center">
+          <div 
+            ref={cardRef}
+            className={`w-full max-w-md aspect-[1.75/1] rounded-xl p-8 flex flex-col justify-between shadow-2xl relative overflow-hidden ${template.bg} ${template.text}`}
+          >
+            <div className="flex justify-between items-start relative z-10">
+              <div className="flex items-center gap-3">
+                {logo ? (
+                  <img src={logo} alt="Logo" className="w-10 h-10 object-contain" />
+                ) : (
+                  <div className={`w-10 h-10 ${template.accent} rounded-lg flex items-center justify-center`}>
+                    <Briefcase size={20} className={template.id === 'creative' ? 'text-emerald-500' : 'text-white'} />
+                  </div>
+                )}
+                <div>
+                  <h2 className="text-lg font-black tracking-tighter leading-none">{data.name}</h2>
+                  <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 mt-1">{data.title}</p>
+                </div>
+              </div>
+              <div className={`w-12 h-1 ${template.accent} rounded-full`}></div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 relative z-10">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-[10px] font-bold">
+                  <Mail size={12} className="opacity-40" />
+                  <span className="truncate">{data.email}</span>
+                </div>
+                <div className="flex items-center gap-2 text-[10px] font-bold">
+                  <Phone size={12} className="opacity-40" />
+                  <span>{data.phone}</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-[10px] font-bold">
+                  <Globe size={12} className="opacity-40" />
+                  <span className="truncate">{data.website}</span>
+                </div>
+                <div className="flex items-center gap-2 text-[10px] font-bold">
+                  <MapPin size={12} className="opacity-40" />
+                  <span className="truncate">{data.address}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Decorative Elements */}
+            <div className={`absolute right-0 top-0 w-32 h-full ${template.accent} opacity-5 -skew-x-12 translate-x-16`}></div>
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div className="space-y-6">
+          <div className="bg-white/5 p-6 rounded-3xl border border-white/10 space-y-4">
+            <div className="space-y-3">
+              <label className="text-xs font-bold text-white/40 uppercase tracking-widest">Select Template</label>
+              <div className="grid grid-cols-2 gap-3">
+                {templates.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setTemplate(t)}
+                    className={`p-3 rounded-2xl border-2 transition-all text-xs font-bold flex items-center justify-between ${template.id === t.id ? 'border-emerald-500 bg-emerald-500/10' : 'border-white/5 bg-white/5'}`}
+                  >
+                    {t.name}
+                    {template.id === t.id && <Check size={14} className="text-emerald-500" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-white/40 uppercase">Full Name</label>
+                <input 
+                  type="text" 
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  value={data.name}
+                  onChange={(e) => setData({ ...data, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-white/40 uppercase">Job Title</label>
+                <input 
+                  type="text" 
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  value={data.title}
+                  onChange={(e) => setData({ ...data, title: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-white/40 uppercase">Email</label>
+                <input 
+                  type="email" 
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  value={data.email}
+                  onChange={(e) => setData({ ...data, email: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-white/40 uppercase">Phone</label>
+                <input 
+                  type="text" 
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  value={data.phone}
+                  onChange={(e) => setData({ ...data, phone: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-xs font-bold text-white/40 uppercase tracking-widest">Company Logo</label>
+              <div className="flex gap-4 items-center">
+                <label className="flex-1 flex items-center justify-center gap-2 py-4 bg-white/5 border border-dashed border-white/20 rounded-2xl cursor-pointer hover:bg-white/10 transition-all">
+                  <Upload size={18} />
+                  <span className="text-sm font-bold">Upload Logo</span>
+                  <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                </label>
+                {logo && (
+                  <button onClick={() => setLogo(null)} className="p-4 bg-rose-500/10 text-rose-500 rounded-2xl hover:bg-rose-500/20 transition-all">
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="relative">
+            <button 
+              onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+              disabled={isDownloading}
+              className="w-full bg-emerald-500 py-4 rounded-2xl font-bold text-black shadow-lg shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isDownloading ? (
+                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <Download size={20} /> Download Options <ChevronDown size={16} className={`transition-transform ${showDownloadMenu ? 'rotate-180' : ''}`} />
+                </>
+              )}
+            </button>
+
+            <AnimatePresence>
+              {showDownloadMenu && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute bottom-full left-0 w-full mb-2 bg-slate-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-20"
+                >
+                  <button onClick={() => downloadAs('png')} className="w-full p-4 flex items-center gap-3 hover:bg-white/5 transition-colors text-left">
+                    <FileImage size={18} className="text-emerald-400" />
+                    <div>
+                      <p className="text-sm font-bold">Download as PNG</p>
+                      <p className="text-[10px] text-white/40">High quality image</p>
+                    </div>
+                  </button>
+                  <button onClick={() => downloadAs('jpg')} className="w-full p-4 flex items-center gap-3 hover:bg-white/5 transition-colors text-left border-t border-white/5">
+                    <FileType size={18} className="text-blue-400" />
+                    <div>
+                      <p className="text-sm font-bold">Download as JPG</p>
+                      <p className="text-[10px] text-white/40">Compressed image</p>
+                    </div>
+                  </button>
+                  <button onClick={() => downloadAs('pdf')} className="w-full p-4 flex items-center gap-3 hover:bg-white/5 transition-colors text-left border-t border-white/5">
+                    <FileText size={18} className="text-rose-400" />
+                    <div>
+                      <p className="text-sm font-bold">Download as PDF</p>
+                      <p className="text-[10px] text-white/40">Print-ready document</p>
+                    </div>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

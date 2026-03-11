@@ -1,0 +1,9 @@
+{
+  "name": "EduToolsPro",
+  "description": "A comprehensive PWA educational tool app with basic and premium tools, AI features, quizzes, and real-time chat.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
